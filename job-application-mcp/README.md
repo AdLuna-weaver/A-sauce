@@ -1,6 +1,6 @@
-# Job Application Automation MCP Server
+# Enhanced Job Application Automation MCP Server
 
-An advanced Model Context Protocol (MCP) server for automated job application material generation, specializing in **Revenue Operations**, **Sales Enablement**, and **Go-to-Market** roles. Built specifically for Jacob Weaver's job search automation.
+An advanced Model Context Protocol (MCP) server for automated job application material generation, specializing in **Revenue Operations**, **Sales Enablement**, and **Go-to-Market** roles. Built specifically for Jacob Weaver's job search automation with enhanced error handling, file saving capabilities, and production-ready features.
 
 ## 🎯 Overview
 
@@ -18,6 +18,7 @@ This MCP server provides end-to-end automation for creating highly customized, A
 - `create_application_materials` - Generate complete application package (resume, cover letter, 30/60/90 plan)
 - `refine_application_materials` - Polish and optimize materials for maximum impact
 - `generate_complete_application` - End-to-end generation (runs all steps in sequence)
+- `save_application_package` - Save generated materials to local files with organized structure
 
 ### Key Benefits
 - **3x Faster** than manual application creation
@@ -25,12 +26,15 @@ This MCP server provides end-to-end automation for creating highly customized, A
 - **Company-Specific** customization using research data
 - **Professional Quality** executive-level materials
 - **Cost Effective** - 60-70% savings vs OpenAI Assistants API
+- **Production Ready** - Enhanced error handling, validation, and configuration management
+- **File Export** - Automatic saving to organized local files (txt, json formats)
+- **Robust Architecture** - Centralized OpenAI API handling with timeout management
 
 ## 📦 Installation
 
 ### Prerequisites
 - Node.js 18.0.0 or higher
-- OpenAI API key
+- OpenAI API key (required - server validates on startup)
 - npm or yarn package manager
 
 ### Quick Setup
@@ -75,6 +79,8 @@ npm start
   - Analysis: 0.3 (focused)
   - Creation: 0.4 (balanced)
   - Refinement: 0.2 (precise)
+- **Timeout**: 60 seconds per API call
+- **Error Handling**: Comprehensive retry logic and validation
 
 ## 💻 Usage
 
@@ -150,10 +156,12 @@ async function generateApplicationMaterials() {
 ### Server Structure
 ```
 job-application-mcp/
-├── index.js              # Main MCP server implementation
+├── index.js              # Enhanced MCP server implementation
 ├── package.json          # Project configuration and dependencies
-├── test.js               # Test suite for server validation
-├── README.md             # This documentation
+├── test.js               # Comprehensive test suite
+├── README.md             # Complete documentation
+├── LICENSE               # MIT license
+├── output/               # Generated application files (created automatically)
 └── node_modules/         # Installed dependencies
 ```
 
@@ -162,6 +170,14 @@ job-application-mcp/
 2. **Materials Creation** - Generates customized resume, cover letter, and plan
 3. **Content Refinement** - Polishes materials to executive standards
 4. **Quality Control** - Ensures ATS optimization and factual accuracy
+5. **File Export** - Saves organized application package to local files
+
+### Enhanced Features
+- **Configuration Management** - Centralized CONFIG object for all settings
+- **API Validation** - Mandatory OpenAI API key with startup validation
+- **Improved Logging** - Enhanced console output with emojis and structure
+- **Error Handling** - Comprehensive try-catch blocks with detailed error messages
+- **File Operations** - Automatic directory creation and organized file structure
 
 ## 🌐 Deployment Options
 
@@ -235,6 +251,18 @@ node test.js
 
 ## 🔍 Example Output
 
+### Generated File Structure
+When using the `save_application_package` tool, files are automatically organized:
+
+```
+./output/
+├── Amplemarket_Revenue_Enablement_Manager_2025-08-06_strengths_analysis.json
+├── Amplemarket_Revenue_Enablement_Manager_2025-08-06_resume.txt
+├── Amplemarket_Revenue_Enablement_Manager_2025-08-06_cover_letter.txt
+├── Amplemarket_Revenue_Enablement_Manager_2025-08-06_30_60_90_plan.txt
+└── Amplemarket_Revenue_Enablement_Manager_2025-08-06_complete_package.json
+```
+
 ### Generated Resume (Excerpt)
 ```
 JACOB WEAVER
@@ -267,6 +295,47 @@ FIRST 30 DAYS - Onboarding & Discovery
     ├── 1:1s with Sales, Marketing, Product leadership
     ├── Review current ramp time and quota attainment metrics
     └── Assess GTM tech stack integration points
+```
+
+### Server Output Example
+```
+🚀 Starting complete application generation for Amplemarket - Revenue Enablement Manager
+📊 Step 1: Analyzing job strengths...
+✅ Strengths analysis completed for Amplemarket Revenue Enablement Manager role.
+
+Top identified strengths:
+• Sales Enablement & Training Expertise
+• Revenue Operations & Performance Optimization
+• Cross-functional Collaboration & GTM Alignment
+
+📝 Step 2: Creating application materials...
+✅ Application materials created for Amplemarket Revenue Enablement Manager role.
+
+Generated:
+• Customized Resume
+• Personalized Cover Letter
+• Strategic 30/60/90 Day Plan
+
+✨ Step 3: Refining application materials...
+✅ Application materials refined for Amplemarket Revenue Enablement Manager role.
+
+Refinements applied:
+• Executive-level language enhancement
+• ATS keyword optimization
+• Professional presentation polish
+
+✅ Complete application generated in 3847ms
+
+💾 Application package saved successfully!
+
+📁 Files created:
+• ./output/Amplemarket_Revenue_Enablement_Manager_2025-08-06_strengths_analysis.json
+• ./output/Amplemarket_Revenue_Enablement_Manager_2025-08-06_resume.txt
+• ./output/Amplemarket_Revenue_Enablement_Manager_2025-08-06_cover_letter.txt
+• ./output/Amplemarket_Revenue_Enablement_Manager_2025-08-06_30_60_90_plan.txt
+• ./output/Amplemarket_Revenue_Enablement_Manager_2025-08-06_complete_package.json
+
+📂 Output directory: /workspace/job-application-mcp/output
 ```
 
 ## 🤝 Contributing

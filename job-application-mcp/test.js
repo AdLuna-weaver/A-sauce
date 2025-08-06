@@ -41,8 +41,12 @@ function testServerConnection() {
   return new Promise((resolve, reject) => {
     console.log('📡 Testing server connection...');
     
+    // Test with mock API key for validation
+    const env = { ...process.env, OPENAI_API_KEY: 'test-key-for-validation' };
+    
     const server = spawn('node', ['index.js'], {
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: env
     });
 
     let output = '';
@@ -54,8 +58,8 @@ function testServerConnection() {
 
     server.stderr.on('data', (data) => {
       errorOutput += data.toString();
-      // Check if server started successfully
-      if (errorOutput.includes('Job Application Automation MCP server running on stdio')) {
+      // Check if server started successfully with enhanced logging
+      if (errorOutput.includes('🤖 Job Application Automation MCP server running on stdio')) {
         console.log('✅ Server started successfully');
         
         // Send a list tools request
@@ -104,12 +108,13 @@ async function runTests() {
     console.log('\n🎯 Basic Tests Completed Successfully!\n');
     
     console.log('📋 Server Summary:');
-    console.log('• MCP Job Application Automation Server is ready');
-    console.log('• 4 tools available:');
+    console.log('• Enhanced MCP Job Application Automation Server is ready');
+    console.log('• 5 tools available:');
     console.log('  - analyze_job_strengths');
     console.log('  - create_application_materials');
     console.log('  - refine_application_materials');
     console.log('  - generate_complete_application');
+    console.log('  - save_application_package');
     console.log('\n💡 Next Steps:');
     console.log('1. Set your OpenAI API key: export OPENAI_API_KEY=your-key-here');
     console.log('2. Start the server: npm start');

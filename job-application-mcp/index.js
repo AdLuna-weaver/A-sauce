@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * MCP Job Application Automation Server
+ * Enhanced MCP Job Application Automation Server
  * Handles end-to-end job application material generation for Jacob Weaver
  * Specializes in Revenue Operations, Sales Enablement, and GTM roles
  */
@@ -15,10 +15,32 @@ import {
   McpError,
 } from '@modelcontextprotocol/sdk/types.js';
 import OpenAI from 'openai';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+// Configuration
+const CONFIG = {
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY,
+    model: 'gpt-4o',
+    timeout: 60000
+  },
+  server: {
+    name: 'job-application-automation',
+    version: '1.0.0'
+  }
+};
+
+// Validation
+if (!CONFIG.openai.apiKey) {
+  console.error('ERROR: OPENAI_API_KEY environment variable is required');
+  process.exit(1);
+}
 
 // OpenAI Configuration
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || 'your-openai-api-key-here'
+  apiKey: CONFIG.openai.apiKey,
+  timeout: CONFIG.openai.timeout
 });
 
 // Jacob's Master Resume Data
@@ -187,8 +209,8 @@ class JobApplicationServer {
   constructor() {
     this.server = new Server(
       {
-        name: 'job-application-automation',
-        version: '1.0.0',
+        name: CONFIG.server.name,
+        version: CONFIG.server.version,
       },
       {
         capabilities: {
@@ -211,22 +233,24 @@ class JobApplicationServer {
             inputSchema: {
               type: 'object',
               properties: {
-                company_name: { type: 'string' },
-                job_title: { type: 'string' },
+                company_name: { type: 'string', description: 'Name of the target company' },
+                job_title: { type: 'string', description: 'Title of the job position' },
                 company_research: {
                   type: 'object',
+                  description: 'Research data about the target company',
                   properties: {
-                    industry: { type: 'string' },
-                    employee_count: { type: 'string' },
-                    mission_values: { type: 'string' },
-                    recent_developments: { type: 'string' },
-                    market_position: { type: 'string' },
-                    key_challenges: { type: 'string' }
+                    industry: { type: 'string', description: 'Industry sector' },
+                    employee_count: { type: 'string', description: 'Company size' },
+                    mission_values: { type: 'string', description: 'Company mission and values' },
+                    recent_developments: { type: 'string', description: 'Recent company news/developments' },
+                    market_position: { type: 'string', description: 'Market position and competitors' },
+                    key_challenges: { type: 'string', description: 'Known challenges the company faces' }
                   },
                   required: ['industry', 'employee_count', 'mission_values', 'recent_developments', 'market_position', 'key_challenges']
                 },
                 job_requirements: {
                   type: 'array',
+                  description: 'List of job requirements from the posting',
                   items: { type: 'string' }
                 }
               },
@@ -239,12 +263,19 @@ class JobApplicationServer {
             inputSchema: {
               type: 'object',
               properties: {
-                company_name: { type: 'string' },
-                job_title: { type: 'string' },
-                strengths_analysis: { type: 'object' },
-                company_research: { type: 'object' },
+                company_name: { type: 'string', description: 'Name of the target company' },
+                job_title: { type: 'string', description: 'Title of the job position' },
+                strengths_analysis: { 
+                  type: 'object',
+                  description: 'Output from the strengths analysis step'
+                },
+                company_research: { 
+                  type: 'object',
+                  description: 'Company research data'
+                },
                 ats_keywords: {
                   type: 'array',
+                  description: 'Keywords to integrate for ATS optimization',
                   items: { type: 'string' }
                 }
               },
@@ -257,19 +288,25 @@ class JobApplicationServer {
             inputSchema: {
               type: 'object',
               properties: {
-                company_name: { type: 'string' },
-                job_title: { type: 'string' },
-                original_materials: { type: 'object' },
+                company_name: { type: 'string', description: 'Name of the target company' },
+                job_title: { type: 'string', description: 'Title of the job position' },
+                original_materials: { 
+                  type: 'object',
+                  description: 'Original application materials to refine'
+                },
                 ats_keywords: {
                   type: 'array',
+                  description: 'Additional ATS keywords to integrate',
                   items: { type: 'string' }
                 },
                 refinement_focus: {
                   type: 'array',
-                  items: { type: 'string' }
+                  description: 'Specific areas to focus refinement on',
+                  items: { type: 'string' },
+                  default: ['all']
                 }
               },
-              required: ['company_name', 'job_title', 'original_materials', 'ats_keywords', 'refinement_focus']
+              required: ['company_name', 'job_title', 'original_materials', 'ats_keywords']
             }
           },
           {
@@ -278,10 +315,11 @@ class JobApplicationServer {
             inputSchema: {
               type: 'object',
               properties: {
-                company_name: { type: 'string' },
-                job_title: { type: 'string' },
+                company_name: { type: 'string', description: 'Name of the target company' },
+                job_title: { type: 'string', description: 'Title of the job position' },
                 company_research: {
                   type: 'object',
+                  description: 'Research data about the target company',
                   properties: {
                     industry: { type: 'string' },
                     employee_count: { type: 'string' },
@@ -294,14 +332,37 @@ class JobApplicationServer {
                 },
                 job_requirements: {
                   type: 'array',
+                  description: 'List of job requirements from the posting',
                   items: { type: 'string' }
                 },
                 ats_keywords: {
                   type: 'array',
+                  description: 'Keywords to integrate for ATS optimization',
                   items: { type: 'string' }
                 }
               },
               required: ['company_name', 'job_title', 'company_research', 'job_requirements', 'ats_keywords']
+            }
+          },
+          {
+            name: 'save_application_package',
+            description: 'Save generated application materials to local files',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                company_name: { type: 'string', description: 'Company name for file naming' },
+                job_title: { type: 'string', description: 'Job title for file naming' },
+                application_package: { 
+                  type: 'object',
+                  description: 'Complete application package to save'
+                },
+                output_directory: {
+                  type: 'string',
+                  description: 'Directory to save files (default: ./output)',
+                  default: './output'
+                }
+              },
+              required: ['company_name', 'job_title', 'application_package']
             }
           }
         ],
@@ -326,6 +387,9 @@ class JobApplicationServer {
           case 'generate_complete_application':
             return await this.generateCompleteApplication(args);
           
+          case 'save_application_package':
+            return await this.saveApplicationPackage(args);
+          
           default:
             throw new McpError(
               ErrorCode.MethodNotFound,
@@ -340,6 +404,22 @@ class JobApplicationServer {
         );
       }
     });
+  }
+
+  async callOpenAI(prompt, temperature = 0.3) {
+    try {
+      const response = await openai.chat.completions.create({
+        model: CONFIG.openai.model,
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        temperature: temperature
+      });
+
+      return JSON.parse(response.choices[0].message.content);
+    } catch (error) {
+      console.error('OpenAI API Error:', error);
+      throw new Error(`OpenAI API call failed: ${error.message}`);
+    }
   }
 
   async analyzeJobStrengths(args) {
@@ -363,19 +443,12 @@ class JobApplicationServer {
     
     Provide structured analysis identifying Jacob's top strengths for this specific role.`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      temperature: 0.3
-    });
-
-    const analysis = JSON.parse(response.choices[0].message.content);
+    const analysis = await this.callOpenAI(prompt, 0.3);
 
     return {
       content: [{
         type: 'text',
-        text: `Strengths analysis completed for ${args.company_name} ${args.job_title} role.`
+        text: `✅ Strengths analysis completed for ${args.company_name} ${args.job_title} role.\n\nTop identified strengths:\n${analysis.top_5_strengths.map(s => `• ${s.strength}`).join('\n')}`
       }],
       isError: false,
       _meta: {
@@ -404,19 +477,12 @@ class JobApplicationServer {
     
     Create complete application package with customized resume, personalized cover letter, and strategic 30/60/90 day plan.`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      temperature: 0.4
-    });
-
-    const materials = JSON.parse(response.choices[0].message.content);
+    const materials = await this.callOpenAI(prompt, 0.4);
 
     return {
       content: [{
         type: 'text',
-        text: `Application materials created for ${args.company_name} ${args.job_title} role.`
+        text: `✅ Application materials created for ${args.company_name} ${args.job_title} role.\n\nGenerated:\n• Customized Resume\n• Personalized Cover Letter\n• Strategic 30/60/90 Day Plan`
       }],
       isError: false,
       _meta: {
@@ -427,6 +493,8 @@ class JobApplicationServer {
   }
 
   async refineApplicationMaterials(args) {
+    const refinementFocus = args.refinement_focus || ['all'];
+    
     const prompt = `${CONTENT_REFINEMENT_PROMPT}
 
     Refine these application materials for:
@@ -441,23 +509,16 @@ class JobApplicationServer {
     ${args.ats_keywords.join(', ')}
     
     REFINEMENT FOCUS:
-    ${args.refinement_focus.join(', ')}
+    ${refinementFocus.join(', ')}
     
     Polish these materials to executive standards while maintaining authenticity and factual accuracy.`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      temperature: 0.2
-    });
-
-    const refined = JSON.parse(response.choices[0].message.content);
+    const refined = await this.callOpenAI(prompt, 0.2);
 
     return {
       content: [{
         type: 'text',
-        text: `Application materials refined for ${args.company_name} ${args.job_title} role.`
+        text: `✅ Application materials refined for ${args.company_name} ${args.job_title} role.\n\nRefinements applied:\n• Executive-level language enhancement\n• ATS keyword optimization\n• Professional presentation polish`
       }],
       isError: false,
       _meta: {
@@ -471,10 +532,10 @@ class JobApplicationServer {
     const startTime = Date.now();
     
     try {
-      console.log(`Starting complete application generation for ${args.company_name} - ${args.job_title}`);
+      console.error(`🚀 Starting complete application generation for ${args.company_name} - ${args.job_title}`);
       
       // Step 1: Analyze strengths
-      console.log('Step 1: Analyzing job strengths...');
+      console.error('📊 Step 1: Analyzing job strengths...');
       const strengthsResult = await this.analyzeJobStrengths({
         company_name: args.company_name,
         job_title: args.job_title,
@@ -485,7 +546,7 @@ class JobApplicationServer {
       const strengthsAnalysis = strengthsResult._meta.analysis;
       
       // Step 2: Create materials
-      console.log('Step 2: Creating application materials...');
+      console.error('📝 Step 2: Creating application materials...');
       const materialsResult = await this.createApplicationMaterials({
         company_name: args.company_name,
         job_title: args.job_title,
@@ -497,7 +558,7 @@ class JobApplicationServer {
       const originalMaterials = materialsResult._meta.materials;
       
       // Step 3: Refine materials
-      console.log('Step 3: Refining application materials...');
+      console.error('✨ Step 3: Refining application materials...');
       const refinedResult = await this.refineApplicationMaterials({
         company_name: args.company_name,
         job_title: args.job_title,
@@ -507,11 +568,12 @@ class JobApplicationServer {
       });
       
       const processingTime = Date.now() - startTime;
+      console.error(`✅ Complete application generated in ${processingTime}ms`);
       
       return {
         content: [{
           type: 'text',
-          text: `Complete application package generated for ${args.company_name} - ${args.job_title} in ${processingTime}ms`
+          text: `🎉 Complete application package generated for ${args.company_name} - ${args.job_title}\n\n⏱️ Processing time: ${processingTime}ms\n\n📦 Package includes:\n• Strengths Analysis\n• Customized Resume\n• Personalized Cover Letter\n• Strategic 30/60/90 Day Plan\n\nUse 'save_application_package' tool to save files locally.`
         }],
         isError: false,
         _meta: {
@@ -526,12 +588,12 @@ class JobApplicationServer {
       };
       
     } catch (error) {
-      console.error('Error in complete application generation:', error);
+      console.error('❌ Error in complete application generation:', error);
       
       return {
         content: [{
           type: 'text',
-          text: `Failed to generate complete application: ${error.message}`
+          text: `❌ Failed to generate complete application: ${error.message}`
         }],
         isError: true,
         _meta: {
@@ -542,10 +604,128 @@ class JobApplicationServer {
     }
   }
 
+  async saveApplicationPackage(args) {
+    try {
+      const outputDir = args.output_directory || './output';
+      const sanitizedCompany = args.company_name.replace(/[^a-zA-Z0-9]/g, '_');
+      const sanitizedTitle = args.job_title.replace(/[^a-zA-Z0-9]/g, '_');
+      const timestamp = new Date().toISOString().split('T')[0];
+      
+      // Create output directory
+      await fs.mkdir(outputDir, { recursive: true });
+      
+      const packageData = args.application_package;
+      const baseFilename = `${sanitizedCompany}_${sanitizedTitle}_${timestamp}`;
+      
+      // Save individual files
+      const files = [];
+      
+      // Save strengths analysis as JSON
+      if (packageData.strengths_analysis) {
+        const strengthsFile = path.join(outputDir, `${baseFilename}_strengths_analysis.json`);
+        await fs.writeFile(strengthsFile, JSON.stringify(packageData.strengths_analysis, null, 2));
+        files.push(strengthsFile);
+      }
+      
+      // Save final materials
+      if (packageData.final_materials) {
+        const materials = packageData.final_materials;
+        
+        // Resume as text file
+        if (materials.resume) {
+          const resumeFile = path.join(outputDir, `${baseFilename}_resume.txt`);
+          const resumeContent = this.formatResumeAsText(materials.resume);
+          await fs.writeFile(resumeFile, resumeContent);
+          files.push(resumeFile);
+        }
+        
+        // Cover letter as text file
+        if (materials.cover_letter) {
+          const coverLetterFile = path.join(outputDir, `${baseFilename}_cover_letter.txt`);
+          await fs.writeFile(coverLetterFile, materials.cover_letter);
+          files.push(coverLetterFile);
+        }
+        
+        // 30/60/90 day plan as text file
+        if (materials.thirty_sixty_ninety_day_plan) {
+          const planFile = path.join(outputDir, `${baseFilename}_30_60_90_plan.txt`);
+          await fs.writeFile(planFile, materials.thirty_sixty_ninety_day_plan);
+          files.push(planFile);
+        }
+        
+        // Complete package as JSON
+        const packageFile = path.join(outputDir, `${baseFilename}_complete_package.json`);
+        await fs.writeFile(packageFile, JSON.stringify(packageData, null, 2));
+        files.push(packageFile);
+      }
+      
+      return {
+        content: [{
+          type: 'text',
+          text: `💾 Application package saved successfully!\n\n📁 Files created:\n${files.map(f => `• ${f}`).join('\n')}\n\n📂 Output directory: ${path.resolve(outputDir)}`
+        }],
+        isError: false,
+        _meta: {
+          output_directory: outputDir,
+          files_created: files,
+          saved_at: new Date().toISOString()
+        }
+      };
+      
+    } catch (error) {
+      console.error('❌ Error saving application package:', error);
+      
+      return {
+        content: [{
+          type: 'text',
+          text: `❌ Failed to save application package: ${error.message}`
+        }],
+        isError: true,
+        _meta: {
+          error: error.message
+        }
+      };
+    }
+  }
+
+  formatResumeAsText(resume) {
+    let text = resume.header + '\n\n';
+    
+    text += 'PROFESSIONAL EXPERIENCE\n\n';
+    
+    if (resume.experience) {
+      resume.experience.forEach(exp => {
+        text += `${exp.company} | ${exp.location}\n`;
+        text += `${exp.title} | ${exp.dates}\n`;
+        if (exp.bullets) {
+          exp.bullets.forEach(bullet => {
+            text += `• ${bullet}\n`;
+          });
+        }
+        text += '\n';
+      });
+    }
+    
+    if (resume.core_competencies) {
+      text += 'CORE COMPETENCIES\n';
+      text += resume.core_competencies.join(', ') + '\n\n';
+    }
+    
+    if (resume.achievements_certifications) {
+      text += 'ACHIEVEMENTS & CERTIFICATIONS\n';
+      resume.achievements_certifications.forEach(achievement => {
+        text += `• ${achievement}\n`;
+      });
+    }
+    
+    return text;
+  }
+
   async run() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('Job Application Automation MCP server running on stdio');
+    console.error('🤖 Job Application Automation MCP server running on stdio');
+    console.error(`📋 Available tools: analyze_job_strengths, create_application_materials, refine_application_materials, generate_complete_application, save_application_package`);
   }
 }
 
