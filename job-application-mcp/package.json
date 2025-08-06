@@ -1,0 +1,35 @@
+{
+  "name": "job-application-automation-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for automated job application material generation specializing in Revenue Operations and Sales Enablement roles",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "job-application-mcp": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --inspect index.js",
+    "test": "node test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "openai": "^4.67.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol", 
+    "job-application",
+    "resume-generation",
+    "sales-enablement",
+    "revenue-operations"
+  ],
+  "author": "Jacob Weaver",
+  "license": "MIT"
+}
