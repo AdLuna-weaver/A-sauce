@@ -1,0 +1,16 @@
+name = "job-application-automation-worker"
+main = "src/worker.js"
+compatibility_date = "2025-08-06"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production.vars]
+ENVIRONMENT = "production"
+
+[vars]
+# Set your OpenAI API key in the Cloudflare Workers dashboard
+# OPENAI_API_KEY = "your-key-will-be-set-in-dashboard"
+
+[[kv_namespaces]]
+binding = "APPLICATION_CACHE"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
